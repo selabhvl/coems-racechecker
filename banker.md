@@ -24,13 +24,12 @@ $ perl diff_ts.pl <traces.log | java -jar /path/to/tessla.jar banker.spec  | gre
 
 ## Alternative "full" sw-tracing
 
-Initial version of Eraser for NIK'18 paper. Produces many false positives.
+Initial version of Eraser for NIK'18 paper. Produces more false positives.
 
 ````
-$ java -jar /path/to/tessla.jar banker.spec  traces.log | grep in_line
-2190452: error_0_in_line = 58
-2220174: error_0_in_line = 59
-2302220: error_0_in_line = 24
-2330446: error_0_in_line = 35
-2822983: error_1_in_line = 32767
+$ java -jar /path/to/tessla.jar data-race-spec/full_lockset_tessla_1.1.0_varaddr.tessla  traces.log | grep in_line
+646928: error_in_line = 28
+994706: error_in_line = 28
+1306904: error_in_line = 59
+1630174: error_in_line = 41
 ````
