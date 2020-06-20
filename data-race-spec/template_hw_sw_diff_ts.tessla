@@ -1,0 +1,203 @@
+#!/bin/bash
+set -e
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -l|--locks)
+    L="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -s|--shared)
+    SV="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -d|--dynamic)
+    DYN="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+# TODO: fix sanity check for DYN
+if [[ -z ${L} ]] ; then
+  echo >&2 "You must set L >= 1 for template instantiation!"
+  echo >&2 "Usage: $ bash $0 -l \"42 48\" -s \"128 132\""
+  exit 1;
+fi
+if [[ ! -z ${POSITIONAL} ]]; then
+  echo >&2 "Left-over command line arguments: ${POSITIONAL}"
+  echo >&2 "Did you mean -s \"x z y\" and forgot the quotes?"
+  exit 1;
+fi
+cat <<HERE
+-- This specification has been generated via the EU H2020 RIA project
+-- COEMS - Continuous Observation of Embedded Multicore Systems
+-- https://www.coems.eu
+--
+-- This work is licensed under a Creative Commons Attribution 4.0 International License,
+-- see https://creativecommons.org/licenses/by/4.0/.
+--
+-- The COEMS project is funded through the European Horizon 2020 program
+-- under grant agreement no. 732016.
+
+in threadid: Events[Int]
+HERE
+if [[ ! -z ${DYN} ]] ; then
+  echo "out threadid"
+fi
+cat <<HERE
+in readaddr: Events[Int]
+in writeaddr: Events[Int]
+in mutexlockaddr: Events[Int]
+in mutexunlockaddr: Events[Int]
+-- Always 1 if present for now
+in pcreateid: Events[Int]
+in line: Events[Int]
+in column: Events[Int]
+in dyn_base: Events[Int]
+out dyn_base -- avoid dead stream for now, see tessla/epu-compiler#34
+-- -------------------------------------------------------------------------------
+def at[A,B](x: Events[A], y: Events[B]) := {
+  def filterPredicate = time(x) == time(y)
+  filter(first(y, filterPredicate), filterPredicate)
+}
+-- -------------------------------------------------------------------------------
+-- -----LOCKS---------------------------------------------------------------------
+-- -------------------------------------------------------------------------------
+HERE
+c=0
+for k in ${L}; do
+  echo "def lock_${c} := filter(mutexlockaddr ==${k}, mutexlockaddr ==${k})";
+  echo "def unlock_${c} := filter(mutexunlockaddr ==${k}, mutexunlockaddr ==${k})";
+  # If we're using dynamic tracing, currently we need to split the spec earlier
+  #  and transfer those events to the second stage. So here, we always declare them as output
+  #  streams although there might be some scenarious where a) you don't split and b) are not
+  #  interested in having those events in the ouput. We can't really do the same for the
+  #  INPUTS of the second stage, since we would like the unsplit version to be valid TeSSLa.
+  if [[ ! -z ${DYN} ]] ; then
+    echo "out lock_${c}"
+    echo "out unlock_${c}"
+  fi
+  c=`expr $c + 1`;
+done;
+NumLocks=`expr $c - 1` || true # minus one!
+cat <<HERE
+-- -------------------------------------------------------------------------------
+-- -----SHARED VARIABLES----------------------------------------------------------
+-- -------------------------------------------------------------------------------
+-- access_N should be a unit-stream, but then get discrepancies between hw- & sw
+--  in the 2nd stage, see #45. So just print 0.
+HERE
+accesses=""
+c=0
+for k in ${SV}; do
+  echo "def read_${c} := filter(readaddr ==${k}, readaddr ==${k})";
+  echo "def write_${c} := filter(writeaddr ==${k}, writeaddr ==${k})";
+  echo "def access_${c} := merge(read_${c},write_${c})";
+  echo "def access_after_pc_${c} := on(last(pcreateid,access_${c}),line)";
+  accesses="${accesses} ${c}"
+  c=`expr $c + 1`;
+done;
+for k in `seq 0 ${DYN}`; do
+  echo "def tmp_${c} := dyn_base+${k}"
+  echo "def read_${c} := filter(readaddr == tmp_${c}, readaddr == tmp_${c})";
+  echo "def write_${c} := filter(writeaddr == tmp_${c}, writeaddr == tmp_${c})";
+  echo "def access_${c} := merge(read_${c},write_${c})";
+  echo "def access_after_pc_${c} := on(last(pcreateid,access_${c}),line)";
+  accesses="${accesses} ${c}"
+  c=`expr $c + 1`;
+done;
+cat <<HERE
+-- -------------------------------------------------------------------------------
+-- --- TODO: Check EPU numbers for TeSSLa 1.0
+-- -----------4 EPUs up to here---------------------------------------------------
+-- -------------------------------------------------------------------------------
+-- -----THREAD ACCESSING ---------------------------------------------------------
+-- -------------------------------------------------------------------------------
+
+HERE
+c=0
+for k in ${accesses}; do
+  echo "def thread_accessing_${c} := last(threadid*32768+line,access_after_pc_${c})";
+  echo "out thread_accessing_${c}";
+  c=`expr $c + 1`;
+done;
+cat <<HERE
+-- -------------------------------------------------------------------------------
+-- -----------5 EPUs up to here---------------------------------------------------
+-- -------------------------------------------------------------------------------
+-- -----THREAD HOLDING LOCK-------------------------------------------------------
+-- -------------------------------------------------------------------------------
+HERE
+for i in `seq 0 ${NumLocks}`; do
+   echo "def holding_${i} := default(merge(last(threadid,lock_${i}),last(-1,unlock_${i})),-1)";
+   echo "out holding_${i}"
+done;
+cat <<HERE
+
+-- -----------6 EPUs up to here------6 with last----------------------------------
+-- -------------------------------------------------------------------------------
+HERE
+c=0
+for k in ${accesses}; do
+  echo "--in thread_accessing_${c}: Events[Int]";
+  c=`expr $c + 1`;
+done;
+for i in `seq 0 ${NumLocks}`; do
+   echo "--in holding_${i}: Events[Int]"
+done;
+cat <<HERE
+-- -------------------------------------------------------------------------------
+--def at[A,B](x: Events[A], y: Events[B]) := { def filterPredicate = time(x) == time(y); filter(first(y, filterPredicate), filterPredicate) }
+def detect_change(x:Events[Bool]) := merge(filter(x,!x), true)
+HERE
+k=0
+for s in ${accesses}; do
+  echo -- -------------------------------------------------------------------------------
+  echo -- -----CHECKING ${k}----------------------------------------------------------------
+  echo -- -------------------------------------------------------------------------------
+  for j in `seq 0 ${NumLocks}`; do
+     echo "def protecting_${k}_with_${j} := detect_change(default(thread_accessing_${k}/32768==last(holding_${j},thread_accessing_${k}),true))"
+     echo "--out protecting_${k}_with_${j}"
+  done;
+  k=`expr $k + 1`
+done
+cat <<HERE
+-- -------------------------------------------------------------------------------
+-- -----------13 EPUs up to here--------------------------------------------------
+-- -------------------------------------------------------------------------------
+-- -----------ERROR REPORTING-----------------------------------------------------
+-- -the number of EPUs for the error reporting increases with the number of locks
+-- -----------MINIMUM 23 EPUs-----------------------------------------------------
+HERE
+k=0
+for s in ${accesses}; do
+  echo -- -------------------------------------------------------------------------------
+  echo -- -----ERROR REPORT ${k}----------------------------------------------------------------
+  echo -- -------------------------------------------------------------------------------
+  echo -n "def error_${k} := on(thread_accessing_${k},!(protecting_${k}_with_0"
+  if [ ${NumLocks} -ge 1 ]; then
+    for j in `seq 1 ${NumLocks}`; do
+      echo -n "|| protecting_${k}_with_${j}"
+    done;
+  fi
+  echo "))"
+  echo "out error_${k}"
+  echo -- -------------------------------------------------------------------------------
+  echo "def error_${k}_in_line := on(filter(error_${k},error_${k}),thread_accessing_${k}&32767)"
+  echo "out error_${k}_in_line"
+  k=`expr $k + 1`
+done
+echo
