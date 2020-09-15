@@ -21,4 +21,4 @@ do
       l="$l accts[$i].mtx";
 done
 
-$DR_PATH/bin/mkDR.sh $arch $bin_file "${sv}" "${l}" > $OUTFILE
+$DR_PATH/bin/mkDR.sh $arch $bin_file "${sv}" "${l}" | grep -v '@FunctionCall' > $OUTFILE

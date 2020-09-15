@@ -20,7 +20,7 @@ dynamic=""
 # end options
 
 cast=""
-template="tessla_generator_race_detection.py"
+template="tessla_generator_race_detection_diff_ts.py"
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
