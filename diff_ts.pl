@@ -3,6 +3,8 @@
 #  multiple events trigger on the same timestamp into a trace with increasing
 #  timestamps.
 # Author: vs
+use bigint;
+
 $c = 0;
 $old = -1;
 $vts = -1;

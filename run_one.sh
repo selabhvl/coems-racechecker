@@ -49,8 +49,8 @@ fi
 # Will create instrumented binary in the current directory.
 # To do: clean up tmp-files? Don't clobber traces.log?
 if [ -z $1 ]; then exit 1; fi
-if [ $armdran -eq 1 ] && [ ! -f "$COEMSTC/lib/libdebugARM_linux.a" ]; then
-  echo "\$COEMSTC pointing to the right place? Can't find" $COEMSTC/lib/libdebugARM_linux.a
+if [ ! -f "$COEMSTC/xsdk_projects/lib/libcedar_zynq_linux.a" ]; then
+  echo "\$COEMSTC pointing to the right place? Can't find" $COEMSTC/xsdk_projects/lib/libcedar_zynq_linux.a
   exit 1
 fi
 if [ $armdran -eq 1 ] && [ ! -f "$LIBDIR/libinstrumentation.a" ]; then
@@ -67,7 +67,7 @@ f=$(basename $1)
 if [[ $f == *.c ]]; then
     out=$(basename -s .c $1)
     bc="$out".bc
-    $CLANG $CFLAGS $ARM_FLAGS -I. -ggdb -Wall -pedantic -c -emit-llvm $1 -o "$MYTMP/$bc"
+    $CLANG $CFLAGS $ARM_FLAGS -I. -I${LOCKHOME} -ggdb -Wall -pedantic -c -emit-llvm $1 -o "$MYTMP/$bc"
 else if [[ $1 == *.bc ]]; then
 	 # TODO: Since 'instrument' rewrites in place, you don't want to
 	 # call this script repeatedly on the same .bc...
@@ -91,7 +91,7 @@ $BINDIR/instrument $EXTRA_I_FLAGS -n --flush -p "$MYTMP/$bc" >"$MYTMP/$f.iout"
 #  switching this off system-wide at run-time instead for compilation.
 $CLANG -c $ARM_FLAGS $EXTRA_FINAL_FLAGS -g -fno-pie -pthread "$MYTMP/$bc" -o "$out".o
 if [ $armdran -eq 1 ]; then
-  /opt/Xilinx/SDK/2018.2/gnu/aarch32/lin/gcc-arm-linux-gnueabi/bin/arm-linux-gnueabihf-g++ -L"$COEMSTC/lib" -L"$LIBDIR" -static -o "$out" "$out.o" -linstrumentation -ldebugARM_linux -ldebugCore_linux -lpthread
+  /opt/Xilinx/SDK/2018.2/gnu/aarch32/lin/gcc-arm-linux-gnueabi/bin/arm-linux-gnueabihf-g++ -L"$COEMSTC/xsdk_projects/lib" -L"$LIBDIR" -static -o "$out" "$out.o" -linstrumentation -lcedar_zynq_linux -laurora_zynq_linux -lpthread
 else
   $CLANG -L"$LIBDIR" -static -o "$out" "$out.o" -linstrumentation_local -lpthread
 fi

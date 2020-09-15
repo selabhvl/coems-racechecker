@@ -7,7 +7,7 @@ in readvar: Events[String]
 in writevar: Events[String]
 in mutexlockaddr: Events[Int]
 in mutexunlockaddr: Events[Int]
-in pcreateid: Events[Int]
+in pcreateid: Events[Unit]
 in line: Events[Int]
 in column: Events[Int]
 in function: Events[String]
@@ -49,7 +49,7 @@ def access_varname:=merge(readvar,writevar)
 --out access_varname
 def access:=merge(readaddr,writeaddr)
 out access
-def access_after_pc:=filter(access, pcreateid==1)
+def access_after_pc:=filter(access, pcreateid==())
 def thread_accessing:=at(access,threadid)
 out thread_accessing
 def mapped_thread_accessing:=at(access,mapped_thread_id)

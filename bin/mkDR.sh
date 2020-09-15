@@ -20,7 +20,7 @@ dynamic=""
 # end options
 
 cast=""
-template="template_hw_sw_diff_ts.tessla"
+template="tessla_generator_race_detection.py"
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -37,7 +37,7 @@ case $key in
 	echo >&2 "itm & bit15 mitigation enabled"
 	echo "-- COEMS: template instantiated with bit15 mitigation"
 	cast="(uint16_t)"
-	template="template_hw_sw_diff_ts.tessla"
+	template="tessla_generator_race_detection_diff_ts.py"
 	shift # past argument
 	;;
     -d|--dynamic)
@@ -62,7 +62,7 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 
 LOCKHOME=$(dirname "$BASH_SOURCE")
 # Overwritte by `make install`:
-TEMPLATEDIR="$LOCKHOME"/../data-race-spec
+TEMPLATEDIR="$LOCKHOME"/../tessla_patterns/eraser_algorithm
 binary=$1
 sv=$2
 ls=$3
@@ -103,4 +103,4 @@ echo "-- addresses:"
 echo $addrtableV
 echo $addrtableL
 # Recall that lock-addr 1 is virtual & hard-coded for the main-thread.
-. $TEMPLATEDIR/$template $dynamic -s "$s" -l "1 $l"
+python $TEMPLATEDIR/$template $dynamic -s "$s" -l "1 $l"

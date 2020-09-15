@@ -9,13 +9,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <linux_cedar_init.h>
-#include <linux_cedar.h>
+#include <cedar_linux.h>
 
 extern "C" void itm_init()
 {
-	linux_cedar_init(false,true);
-	sleep(1);
+	cedar_linux_init_epu(false,false,0xc01011c4, 0xc010bba4);
 	cedar_set_appid(0);
-	sleep(1);
 }

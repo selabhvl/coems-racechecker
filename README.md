@@ -63,7 +63,7 @@ Threading API:
 # Dependencies
 
 You need the basic tools to build C++ projects (make, g++, etc.) as well as the LLVM libraries and the Boost program-options library. For COEMS hardware-tracing, you need the Xilinx SDK as well as the `coems-tools/coems-toolchain` project checked out. To run the examples you also need `clang` to generate LLVM-bitcode from the example C code.
-`jq` is required to process intermediate files.
+`jq` is required to process intermediate files. For both hardware- and software tracing you will need the TeSSLa interpreter from https://www.tessla.io/.
 
 You can install all required tools and libraries using the following command:
 
@@ -121,10 +121,7 @@ Note that some particular code patterns produce known false-positives.
 
 The TeSSLa specification for data race detection (lockset algorithm) can be generated from the templates. The only supported concurrency construct are `pthread_mutex`.
 
-There are six TeSSLa templates in `data-race-spec` (those marked with † are for older versions of TeSSLa):
-* template_hw_sw.tessla (D4.2, lock- & memory addresses as input,
-  checking starts after the first pthread_create(), TeSSLa 1.0.7).
-  Intended for use on software-traces.
+There are several TeSSLa templates in `data-race-spec` (those marked with † are for older versions of TeSSLa):
 * template_hw_sw_diff_ts.tessla (D4.2, TeSSLa 1.0.7, almost the same as template_hw_sw.tessla,
   should be used if events on threadid appear before access and lock events, as they do in hardware-traces.
   You can use `diff_ts.pl` to massage an sw-trace (where multiple data is produced at the same point in time) that works for `template_hw_sw.tessla` into one for the hardware (where each datum will have its own timestamp).
@@ -132,13 +129,6 @@ There are six TeSSLa templates in `data-race-spec` (those marked with † are fo
 * full_lockset_tessla_$VER_varaddr.tessla (D4.2 and later, the basic version of lockset
   with data structures (hence sw-only), does not need any parameters,
   checking starts after the first `pthread_create()`)
-* † static_template.tessla (we don't need it anymore, precursor to template_hw_sw.tessla)
-* † template.tessla (NIK + improvements, needs number of locks and list
-  of global variable names, as the instrumentation will directly emit
-  events onto those named streams. Does not use data structures, so in
-  principle one could try on the hw in the split-approach. Instead of listing the
-  global variable names (addresses), a specified number of variable names (addresses) could
-  be checked in the same way as it is done for locks.)
 
 The templates take different parameters; as the templates are scripts, you can easily inspect them if in doubt.
 
@@ -146,14 +136,14 @@ The templates take different parameters; as the templates are scripts, you can e
 
 * no parameters required, sw-trace only.
 
-### template_hw_sw.tessla / template_hw_sw_diff_ts.tessla
+### tessla_generator_race_detection.py / tessla_generator_race_detection_diff_ts.py
 
 * list of memory locations holding locks used in the program,
 * list of memory locations to be checked.
 
 For example, to generate a specification that checks accesses to addresses `42` and `48` in a program which uses locks at addresses `124` and `132`:
 
-    $ bash template_hw_sw_diff_ts.tessla -l "124 132" -s "42 48"
+    $ python tessla_generator_race_detection_diff_ts.py -l "124 132" -s "42 48"
 
 Note the significant use of quotes. See the various Makefiles such as `epu/Makefile` for how to script `gdb` to extract those addresses for global variables.
 

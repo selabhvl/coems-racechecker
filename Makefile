@@ -5,17 +5,13 @@ CC	= clang-6.0
 AR	= ar
 LLVMCONFIG	= llvm-config-6.0
 COEMSTC		?= /home/volker/git/coems-toolchain
-EPUC		= java -jar $(COEMSTC)/bin/isp/epu-compiler-assembly-1.0.2.jar
+EPUC		= java -jar $(COEMSTC)/bin/isp/epu-compiler-assembly-1.0.4.jar
 
 GIT_VERSION := "$(shell git describe --abbrev=4 --dirty --always --tags)"
 
 .PHONY:	clean all install
 
-all: bin/instrument bin/libinstrumentation_local.a # bin/libinstrumentation_local.a
-
-bin/maptoCheck: maptoCheck.cpp
-	@mkdir -p bin
-	$(CXX) $< -o $@
+all: bin/instrument bin/libinstrumentation_local.a
 
 bin/instrument: instrument.cc instrumentation.h worklist2.cpp st_utilize.cpp
 	@mkdir -p bin
@@ -26,15 +22,10 @@ instrumentation.o: instrumentation.c instrumentation.h
 l_instrumentation.o: instrumentation.c instrumentation.h
 	$(CC) -DVERSION=\"$(GIT_VERSION)\" -ggdb -Wall -pedantic -fPIC -pthread -DARM_AB -DWANT_IO -c $< -o $@
 
-linux_cedar.o: $(COEMSTC)/xsdk_projects/shared/linux_cedar.cpp
-	$(ARMCC) -c $< -o $@
-linux_cedar_init_zynq.o: $(COEMSTC)/xsdk_projects/shared/linux_cedar_init_zynq.cpp
-	$(ARMCC) -c -I$(COEMSTC)/include $< -o $@
+itm.o: itm.cc $(COEMSTC)/xsdk_projects/include/cedar_linux.h
+	$(ARMCXX) -ggdb -Wall -pedantic -fPIC -pthread -DHAVE_COEMS -I$(COEMSTC)/include -I$(COEMSTC)/xsdk_projects/include -c $< -o $@
 
-itm.o: itm.cc $(COEMSTC)/xsdk_projects/shared/linux_cedar.h
-	$(ARMCXX) -ggdb -Wall -pedantic -fPIC -pthread -DHAVE_COEMS -I$(COEMSTC)/include -I$(COEMSTC)/xsdk_projects/shared -c $< -o $@
-
-bin/libinstrumentation.a:	instrumentation.o itm.o linux_cedar.o linux_cedar_init_zynq.o
+bin/libinstrumentation.a:	instrumentation.o itm.o
 	@mkdir -p bin
 	$(AR) rcs $@ $^
 
@@ -56,7 +47,7 @@ install: bin/instrument bin/libinstrumentation.a bin/libinstrumentation_local.a
 	install bin/libinstrumentation.a ${PREFIX}/lib/liblock_instrument.a
 	install bin/libinstrumentation_local.a ${PREFIX}/lib/liblock_instrument_local.a
 		  # TODO: Sloppy hack, we really shouldn't do it this way on production systems:
-	install data-race-spec/template.tessla data-race-spec/template_hw_sw_diff_ts.tessla data-race-spec/template_hw_sw.tessla ${PREFIX}/bin
+	install data-race-spec/template.tessla tessla_patterns/eraser_algorithm/tessla_generator_race_detection_diff_ts.py tessla_patterns/eraser_algorithm/tessla_generator_race_detection.py ${PREFIX}/bin
 	install data-race-spec/tessla.jar ${PREFIX}/lib
 	sed -e s+BINDIR=.*$$+BINDIR=${INSTALLDIR}/bin+ \
 				-e s+LIBDIR=.*$$+LIBDIR=${INSTALLDIR}/lib+ \
