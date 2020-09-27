@@ -3,12 +3,10 @@ set -e
 
 # This script takes names of global shared variables and mutexes,
 # and extracts the necessary addresses from the binary with gdb.
-# It then instantiates the desired template.
 # TODOs:
 # * you need to pass at least one shared variable, even if you don't want to
 
 # Option for ITM/HW. Current effects:
-# * switch template
 # * downcast addresses to 16bit
 # * subtract stuck bit coems-tools/coems-toolchain#29
 itm=0
@@ -20,7 +18,7 @@ dynamic=""
 # end options
 
 cast=""
-template="tessla_generator_race_detection.py"
+template="tessla_generator_race_detection_diff_ts.py"
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -37,7 +35,6 @@ case $key in
 	echo >&2 "itm & bit15 mitigation enabled"
 	echo "-- COEMS: template instantiated with bit15 mitigation"
 	cast="(uint16_t)"
-	template="tessla_generator_race_detection_diff_ts.py"
 	shift # past argument
 	;;
     -d|--dynamic)
