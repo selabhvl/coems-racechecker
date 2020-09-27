@@ -11,7 +11,7 @@ Further shell-scripts and Makefiles provide a sample of possible integration to 
 
 `instrument` has many legacy options whose effect is unclear. Handle with care.
 
-`-n/--normalize-timestamps`: timestamps start from zero instead of a wall-clock derived value.
+`-nt/--normalize-timestamps`: timestamps start from zero instead of a wall-clock derived value.
 Essential to surpress timestamp overflows due to our casual handling of 64bit counters.
 Always recommended to be `on`, this may become the new default.
 
@@ -79,7 +79,6 @@ top-level `llvm-static` project which contains an exact receipe. We're in additi
 For **software-only instrumentation**, invoke `make bin/libinstrumentation_local.a`.
 
 For **hardware**-instrumentation, you need a copy of the `coems-tools/coems-toolchain` project checked out.
-As of January 2020, you need the `pre_release` branch.
 You also need Xilinx SDK 2018.2 from the Xilinx archives, which is the version that is used on the DICE system.
 You then need to configure the `Makefile` correctly with those paths, e.g.
 

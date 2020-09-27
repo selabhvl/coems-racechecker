@@ -9,7 +9,7 @@
 #define N_THREADS  2
 #define N_ROUNDS   100
 
-/* Flag that activates/desactivates the data race condition in compilation time */
+/* Flag that activates/deactivates the data race condition from the command line */
 int DATA_RACE = 0 ;
 
 struct account {

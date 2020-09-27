@@ -53,11 +53,10 @@ cat <<HERE
 -- under grant agreement no. 732016.
 
 in threadid: Events[Int]
-HERE
-if [[ ! -z ${DYN} ]] ; then
-  echo "out threadid"
-fi
-cat <<HERE
+in threadid0: Events[Int]
+out threadid0
+in threadid1: Events[Int]
+out threadid1
 in readaddr: Events[Int]
 in writeaddr: Events[Int]
 in mutexlockaddr: Events[Int]

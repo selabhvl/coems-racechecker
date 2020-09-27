@@ -85,7 +85,7 @@ if [ $(command -v $LLVMDIS) ]; then
   $LLVMDIS "$MYTMP/$bc" -o "$MYTMP/$f.ll"
 fi
 # .iout is the instrumentation log
-$BINDIR/instrument $EXTRA_I_FLAGS -n --flush -p "$MYTMP/$bc" >"$MYTMP/$f.iout"
+$BINDIR/instrument $EXTRA_I_FLAGS --normalize-timestamps --flush -p "$MYTMP/$bc" >"$MYTMP/$f.iout"
 # We compile with -fno-pie currently to avoid ASLR, which is the standard on MacOS.
 # It is not necessary on (our) Linux x86, and of course there is always the option of
 #  switching this off system-wide at run-time instead for compilation.
