@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
+#include <unistd.h>
 
 #define N_ACCOUNTS 10
 #define N_THREADS  2
@@ -50,8 +51,8 @@ void *disburse(void *arg) {
 
                 /* Do the actual transfer. */
                 if (accts[from].balance > 0) {
-                        payment = 1 + rand_range(accts[from].balance);
-                        accts[from].balance -= payment;
+                        payment = 1 + rand_range(accts[from].balance); usleep(250);
+                        accts[from].balance -= payment; usleep(250);
                         accts[to].balance   += payment;
                 }
 
